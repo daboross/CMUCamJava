@@ -38,8 +38,14 @@ public class CMUCAMConnection {
     private final BufferedReader input;
     private final BufferedWriter output;
 
-    public CMUCAMConnection() throws NoSuchPortException, PortInUseException, IOException {
-        CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier("USB0");
+    public CMUCAMConnection() throws PortInUseException, IOException, NoSuchPortException {
+        CommPortIdentifier portIdentifier = null;
+        try {
+            portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");
+        } catch (NoSuchPortException e) {
+            SkyLog.log("Couldn't find port /dev/USB0");
+            throw e;
+        }
         if (portIdentifier.isCurrentlyOwned()) {
             SkyLog.err("Port " + portIdentifier.getName() + " is already owned.");
             throw new PortInUseException();
@@ -59,10 +65,14 @@ public class CMUCAMConnection {
 //        begin(230400);
 //        begin(115200);
         begin(19200);
+        SkyLog.log("begin()");
         write("\0\0\0\rRS\r");
-        output.flush();
+        SkyLog.log("wrote");
+//        output.flush();
+//        SkyLog.log("flush");
         String line;
         do {
+            SkyLog.log("Reading line");
             line = input.readLine();
         } while (line.isEmpty());
         SkyLog.log("Line is '%s'", line);

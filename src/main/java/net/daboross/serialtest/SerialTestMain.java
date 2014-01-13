@@ -18,6 +18,7 @@ package net.daboross.serialtest;
 
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
+import gnu.io.UnsupportedCommOperationException;
 import java.io.IOException;
 
 public class SerialTestMain implements Runnable {
@@ -26,7 +27,9 @@ public class SerialTestMain implements Runnable {
     public void run() {
         try {
             CMUCAMConnection cmu = new CMUCAMConnection();
-        } catch (NoSuchPortException | PortInUseException | IOException e) {
+            SkyLog.log("Created");
+            cmu.start();
+        } catch (NoSuchPortException | PortInUseException | IOException | InterruptedException | UnsupportedCommOperationException e) {
             SkyLog.ex(e);
         }
     }
