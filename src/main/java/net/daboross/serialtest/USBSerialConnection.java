@@ -25,18 +25,14 @@ import gnu.io.UnsupportedCommOperationException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
-public class USBSerialConnection implements AbstractSerialConnection {
+public class USBSerialConnection extends AbstractSerialConnection {
 
     private final SerialPort port;
-    private final InputStream inputR;
-    private final BufferedReader input;
-    private final BufferedWriter output;
 
     public USBSerialConnection() throws PortInUseException, IOException, NoSuchPortException {
         CommPortIdentifier portIdentifier = null;
@@ -56,9 +52,10 @@ public class USBSerialConnection implements AbstractSerialConnection {
             throw new ClassCastException();
         }
         port = (SerialPort) commPort;
-        inputR = port.getInputStream();
-        input = new BufferedReader(new InputStreamReader(inputR, Charset.forName("ASCII")));
+        rawInput = port.getInputStream();
+        input = new BufferedReader(new InputStreamReader(rawInput, Charset.forName("ASCII")));
         output = new BufferedWriter(new OutputStreamWriter(port.getOutputStream(), Charset.forName("ASCII")));
+        super.init(rawInput, input, output);
     }
 
     public void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException {
@@ -71,28 +68,5 @@ public class USBSerialConnection implements AbstractSerialConnection {
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         output.flush();
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-    }
-
-    public void write(String str) throws IOException {
-        output.write(str);
-    }
-
-    public void waitForString(String str) throws IOException {
-    }
-
-    public String readUntil(String str) throws IOException {
-        return "";
-    }
-
-    public InputStream getRawInput() {
-        return inputR;
-    }
-
-    public BufferedReader getInput() {
-        return input;
-    }
-
-    public BufferedWriter getOutput() {
-        return output;
     }
 }

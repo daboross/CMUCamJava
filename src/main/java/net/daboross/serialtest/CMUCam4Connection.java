@@ -36,10 +36,12 @@ public class CMUCam4Connection {
         SkyLog.log("Connected to CMUcam4 version " + version + ".");
     }
 
-    public void trackingSettings() throws IOException {
-        waitTillReadyForCommand();
-        sendCommand("CT 1"); // Set color tracking mode to YUV
-        sendCommand("LN 1"); // Set line tracking mode on
+    public void sendSettings() throws IOException {
+        sendCommand("CT 1"); // set Color Tracking mode to YUV
+//        sendCommand("LM 1"); // set Line tracking Mode on
+        sendCommand("AG 0"); // turn off Auto Gain control
+        sendCommand("AW 0"); // turn off Auto White balance
+        sendCommand("ST 118 133 165 176 124 143");
     }
 
     public synchronized String readUntilCommandDone() throws IOException {
@@ -61,6 +63,7 @@ public class CMUCam4Connection {
     }
 
     public synchronized boolean sendCommand(String command) throws IOException {
+        waitTillReadyForCommand();
         readyForCommand = false;
         c.write(command + "\r");
         String validCommand = c.readUntil("\r");

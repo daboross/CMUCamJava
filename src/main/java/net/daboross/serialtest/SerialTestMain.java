@@ -30,7 +30,7 @@ public class SerialTestMain implements Runnable {
             SkyLog.log("Created");
             CMUCam4Connection cmuCam4Connection = new CMUCam4Connection(serialConnection);
             cmuCam4Connection.start();
-            cmuCam4Connection.trackingSettings();
+            cmuCam4Connection.sendSettings();
         } catch (NoSuchPortException | PortInUseException | IOException | InterruptedException | UnsupportedCommOperationException e) {
             SkyLog.ex(e);
         }

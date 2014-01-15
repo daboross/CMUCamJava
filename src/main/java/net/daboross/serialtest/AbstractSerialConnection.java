@@ -19,24 +19,77 @@ package net.daboross.serialtest;
 import gnu.io.UnsupportedCommOperationException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.Arrays;
 
-public interface AbstractSerialConnection {
+public abstract class AbstractSerialConnection {
 
-    public void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException;
+    protected InputStream rawInput;
+    protected BufferedReader input;
+    protected BufferedWriter output;
 
-    public void end() throws IOException, InterruptedException;
+    protected void init(final InputStream rawInput, final BufferedReader input, final BufferedWriter output) {
+        this.rawInput = rawInput;
+        this.input = input;
+        this.output = output;
+    }
 
-    public void write(String str) throws IOException;
+    public abstract void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException;
 
-    public void waitForString(String str)throws IOException;
+    public abstract void end() throws IOException, InterruptedException;
 
-    public String readUntil(String str)throws IOException;
+    public void write(String str) throws IOException {
+        output.write(str);
+    }
 
-    public InputStream getRawInput();
+    public void waitForString(String str) throws IOException {
+        byte[] bytesToMatch = str.getBytes(Charset.forName("ASCII"));
+        int bytesMatched = 0;
+        while (true) {
+            if (bytesMatched >= bytesToMatch.length) {
+                return;
+            }
+            int b = rawInput.read();
+            if (b == bytesToMatch[bytesMatched]) {
+                bytesMatched++;
+            } else {
+                bytesMatched = 0;
+            }
+        }
+    }
 
-    public BufferedReader getInput();
+    public String readUntil(String str) throws IOException {
+        byte[] bytesToMatch = str.getBytes(Charset.forName("ASCII"));
+        int bytesMatched = 0;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        while (true) {
+            if (bytesMatched >= bytesToMatch.length) {
+                byte[] allBytesRead = outputStream.toByteArray();
+                byte[] bytesNotMatched = Arrays.copyOf(allBytesRead, allBytesRead.length - bytesMatched);
+                return new String(bytesNotMatched, Charset.forName("ASCII"));
+            }
+            int b = rawInput.read();
+            if (b == bytesToMatch[bytesMatched]) {
+                bytesMatched++;
+            } else {
+                bytesMatched = 0;
+            }
+            outputStream.write(b);
+        }
+    }
 
-    public BufferedWriter getOutput();
+    public InputStream getRawInput() {
+        return rawInput;
+    }
+
+    public BufferedReader getInput() {
+        return input;
+    }
+
+    public BufferedWriter getOutput() {
+        return output;
+    }
 }
