@@ -31,14 +31,14 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
-public class CMUCAMConnection {
+public class USBSerialConnection implements AbstractSerialConnection {
 
     private final SerialPort port;
     private final InputStream inputR;
     private final BufferedReader input;
     private final BufferedWriter output;
 
-    public CMUCAMConnection() throws PortInUseException, IOException, NoSuchPortException {
+    public USBSerialConnection() throws PortInUseException, IOException, NoSuchPortException {
         CommPortIdentifier portIdentifier = null;
         try {
             portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");
@@ -61,23 +61,6 @@ public class CMUCAMConnection {
         output = new BufferedWriter(new OutputStreamWriter(port.getOutputStream(), Charset.forName("ASCII")));
     }
 
-    public void start() throws InterruptedException, UnsupportedCommOperationException, IOException {
-//        begin(230400);
-//        begin(115200);
-        begin(19200);
-        SkyLog.log("begin()");
-        write("\0\0\0\rRS\r");
-        SkyLog.log("wrote");
-//        output.flush();
-//        SkyLog.log("flush");
-        String line;
-        do {
-            SkyLog.log("Reading line");
-            line = input.readLine();
-        } while (line.isEmpty());
-        SkyLog.log("Line is '%s'", line);
-    }
-
     public void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException {
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         port.setBaudBase(baud);
@@ -92,5 +75,24 @@ public class CMUCAMConnection {
 
     public void write(String str) throws IOException {
         output.write(str);
+    }
+
+    public void waitForString(String str) throws IOException {
+    }
+
+    public String readUntil(String str) throws IOException {
+        return "";
+    }
+
+    public InputStream getRawInput() {
+        return inputR;
+    }
+
+    public BufferedReader getInput() {
+        return input;
+    }
+
+    public BufferedWriter getOutput() {
+        return output;
     }
 }

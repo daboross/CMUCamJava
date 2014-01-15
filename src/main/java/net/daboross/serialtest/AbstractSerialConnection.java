@@ -16,28 +16,27 @@
  */
 package net.daboross.serialtest;
 
-import gnu.io.NoSuchPortException;
-import gnu.io.PortInUseException;
 import gnu.io.UnsupportedCommOperationException;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 
-public class SerialTestMain implements Runnable {
+public interface AbstractSerialConnection {
 
-    @Override
-    public void run() {
-        try {
-            USBSerialConnection serialConnection = new USBSerialConnection();
-            SkyLog.log("Created");
-            CMUCam4Connection cmuCam4Connection = new CMUCam4Connection(serialConnection);
-            cmuCam4Connection.start();
-            cmuCam4Connection.trackingSettings();
-        } catch (NoSuchPortException | PortInUseException | IOException | InterruptedException | UnsupportedCommOperationException e) {
-            SkyLog.ex(e);
-        }
-    }
+    public void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException;
 
-    public static void main(String[] args) {
-        SerialTestMain main = new SerialTestMain();
-        new Thread(main).start();
-    }
+    public void end() throws IOException, InterruptedException;
+
+    public void write(String str) throws IOException;
+
+    public void waitForString(String str)throws IOException;
+
+    public String readUntil(String str)throws IOException;
+
+    public InputStream getRawInput();
+
+    public BufferedReader getInput();
+
+    public BufferedWriter getOutput();
 }
