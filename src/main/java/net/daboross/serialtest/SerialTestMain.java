@@ -16,9 +16,6 @@
  */
 package net.daboross.serialtest;
 
-import gnu.io.NoSuchPortException;
-import gnu.io.PortInUseException;
-import gnu.io.UnsupportedCommOperationException;
 import java.io.IOException;
 
 public class SerialTestMain implements Runnable {
@@ -26,12 +23,17 @@ public class SerialTestMain implements Runnable {
     @Override
     public void run() {
         try {
-            USBSerialConnection serialConnection = new USBSerialConnection();
+            CMUCamConnection c = new RxtxCMUCamConnection();
             SkyLog.log("Created");
-            CMUCam4Connection cmuCam4Connection = new CMUCam4Connection(serialConnection);
-            cmuCam4Connection.start();
-            cmuCam4Connection.sendSettings();
-        } catch (NoSuchPortException | PortInUseException | IOException | InterruptedException | UnsupportedCommOperationException e) {
+            c.start();
+            c.sendCommand("CT 1"); // set Color Tracking mode to YUV
+            c.sendCommand("AG 0"); // turn off Auto Gain control
+            c.sendCommand("AW 0"); // turn off Auto White balance
+            c.sendCommand("ST 237 250 176 193 91 104");
+            String packet = c.readUntil("\r");
+            c.write("\r");
+            c.waitTillReadyForCommand();
+        } catch (IOException | InterruptedException e) {
             SkyLog.ex(e);
         }
     }

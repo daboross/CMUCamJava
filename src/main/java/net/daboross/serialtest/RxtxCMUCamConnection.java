@@ -22,51 +22,44 @@ import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 import gnu.io.SerialPort;
 import gnu.io.UnsupportedCommOperationException;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
-import java.util.concurrent.TimeUnit;
 
-public class USBSerialConnection extends AbstractSerialConnection {
+public class RxtxCMUCamConnection extends CMUCamConnection {
 
     private final SerialPort port;
 
-    public USBSerialConnection() throws PortInUseException, IOException, NoSuchPortException {
-        CommPortIdentifier portIdentifier = null;
+    public RxtxCMUCamConnection() throws IOException {
+        CommPortIdentifier portIdentifier;
         try {
             portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");
         } catch (NoSuchPortException e) {
             SkyLog.log("Couldn't find port /dev/USB0");
-            throw e;
+            throw new IOException(e);
         }
         if (portIdentifier.isCurrentlyOwned()) {
             SkyLog.err("Port " + portIdentifier.getName() + " is already owned.");
-            throw new PortInUseException();
+            throw new IOException("PortInUse");
         }
-        CommPort commPort = portIdentifier.open("CMUCamJava", 2000);
+        CommPort commPort;
+        try {
+            commPort = portIdentifier.open("CMUCamJava", 2000);
+        } catch (PortInUseException e) {
+            throw new IOException("Unexpected PortInUseException", e);
+        }
         if (!(commPort instanceof SerialPort)) {
             SkyLog.err("Gah, this isn't a serial port.");
             throw new ClassCastException();
         }
         port = (SerialPort) commPort;
         rawInput = port.getInputStream();
-        input = new BufferedReader(new InputStreamReader(rawInput, Charset.forName("ASCII")));
-        output = new BufferedWriter(new OutputStreamWriter(port.getOutputStream(), Charset.forName("ASCII")));
-        super.init(rawInput, input, output);
+        rawOutput = port.getOutputStream();
     }
 
-    public void begin(int baud) throws IOException, UnsupportedCommOperationException, InterruptedException {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-        port.setBaudBase(baud);
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-    }
-
-    public void end() throws IOException, InterruptedException {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-        output.flush();
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+    public void setBaud(int baud) throws IOException {
+        try {
+            port.setBaudBase(baud);
+        } catch (UnsupportedCommOperationException e) {
+            throw new IOException("Unexpected UnsupportedCommOperationException", e);
+        }
     }
 }
