@@ -16,27 +16,17 @@
  */
 package net.daboross.serialtest;
 
-import java.util.regex.Pattern;
+import java.nio.charset.Charset;
 
-public class SkyLog {
+public class CSUtils {
 
-    public static void log(String msg, Object... args) {
-        System.out.println(String.format(msg, args));
-        if (args.length > 0 && args[args.length - 1] instanceof Throwable) {
-            ((Throwable) args[args.length - 1]).printStackTrace();
-        }
+    public static final Charset CHARSET = Charset.forName("ASCII");
+
+    public static byte[] toBytes(String str) {
+        return str.getBytes(CHARSET);
     }
 
-    public static void out(String msg) {
-        System.out.print(msg.replaceAll(Pattern.quote("\r"), "\n"));
-    }
-
-    public static void ex(Throwable ex) {
-        System.err.println("Unexpected " + ex.getClass().getSimpleName() + ":");
-        ex.printStackTrace(System.err);
-    }
-
-    public static void err(String msg, Object... args) {
-        System.err.println(String.format(msg, args));
+    public static String toString(byte... bytes) {
+        return new String(bytes, CHARSET);
     }
 }

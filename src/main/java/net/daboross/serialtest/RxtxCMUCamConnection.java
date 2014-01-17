@@ -27,13 +27,23 @@ import java.io.IOException;
 public class RxtxCMUCamConnection extends CMUCamConnection {
 
     private final SerialPort port;
+    private final DebugWindow debug = new DebugWindow(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                end();
+            } catch (IOException e) {
+                SkyLog.log("Unexpected IOException", e);
+            }
+        }
+    });
 
     public RxtxCMUCamConnection() throws IOException {
         CommPortIdentifier portIdentifier;
         try {
             portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");
         } catch (NoSuchPortException e) {
-            SkyLog.log("Couldn't find port /dev/USB0");
+            SkyLog.log("Couldn't find port");
             throw new IOException(e);
         }
         if (portIdentifier.isCurrentlyOwned()) {
@@ -47,19 +57,25 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
             throw new IOException("Unexpected PortInUseException", e);
         }
         if (!(commPort instanceof SerialPort)) {
-            SkyLog.err("Gah, this isn't a serial port.");
+            SkyLog.err("Port not a SerialPort");
             throw new ClassCastException();
         }
         port = (SerialPort) commPort;
-        rawInput = port.getInputStream();
-        rawOutput = port.getOutputStream();
+//        rawInput = port.getInputStream();
+        rawInput = debug.wrapStream(port.getInputStream());
+//        rawOutput = port.getOutputStream();
+        rawOutput = debug.wrapStream(port.getOutputStream());
     }
 
     public void setBaud(int baud) throws IOException {
         try {
-            port.setBaudBase(baud);
+            port.setSerialPortParams(baud, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
         } catch (UnsupportedCommOperationException e) {
             throw new IOException("Unexpected UnsupportedCommOperationException", e);
         }
+    }
+
+    public void close() throws IOException {
+        port.close();
     }
 }

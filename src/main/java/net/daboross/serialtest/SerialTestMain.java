@@ -26,14 +26,18 @@ public class SerialTestMain implements Runnable {
             CMUCamConnection c = new RxtxCMUCamConnection();
             SkyLog.log("Created");
             c.start();
+            SkyLog.log("Started");
             c.sendCommand("CT 1"); // set Color Tracking mode to YUV
+            SkyLog.log("Sent");
             c.sendCommand("AG 0"); // turn off Auto Gain control
+            SkyLog.log("Sent");
             c.sendCommand("AW 0"); // turn off Auto White balance
+            SkyLog.log("Sent");
             c.sendCommand("ST 237 250 176 193 91 104");
-            String packet = c.readUntil("\r");
+            SkyLog.log(c.readUntil("\r"));
             c.write("\r");
             c.waitTillReadyForCommand();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             SkyLog.ex(e);
         }
     }

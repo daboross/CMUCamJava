@@ -16,57 +16,54 @@
  */
 package net.daboross.serialtest;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
+import static net.daboross.serialtest.SkyLog.log;
 
 public abstract class CMUCamConnection {
 
-    private final Charset charset = Charset.forName("ASCII");
     protected InputStream rawInput;
-    protected BufferedReader input;
+    protected Reader input;
     protected OutputStream rawOutput;
-    protected BufferedWriter output;
-    private State state;
+    protected Writer output;
+    private State state = State.NOT_STARTED;
 
-    public void start() throws IOException, InterruptedException {
+    public void start() throws IOException {
         if (state != State.NOT_STARTED) {
             return;
         }
-        input = new BufferedReader(new InputStreamReader(rawInput, charset));
-        output = new BufferedWriter(new OutputStreamWriter(rawOutput, charset));
+        input = new InputStreamReader(rawInput, CSUtils.CHARSET);
+        output = new OutputStreamWriter(rawOutput, CSUtils.CHARSET);
         state = State.RUNNING_COMMAND;
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         setBaud(19200);
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-        output.write("\rRS\r");
+        write("\rRS\r");
+        log("Wrote RS");
         waitUntil("CMUcam4 v");
-        String version = readUntil("\r");
-        SkyLog.log("Connected to CMUcam4 version " + version + ".");
+        String version = readUntilReady();
+        log("Connected to CMUcam4 version '%s'.", version);
     }
 
-    public void end() throws IOException, InterruptedException {
+    public void end() throws IOException {
         if (state == State.NOT_STARTED) {
             return;
         }
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         output.flush();
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         state = State.NOT_STARTED;
     }
 
     public String readUntilReady() throws IOException {
         if (state == State.READY_FOR_COMMAND) {
+            System.out.println("Short circuiting read");
             return "";
         } else if (state == State.RUNNING_COMMAND) {
+            System.out.println("Reading until :");
             String result = readUntil("\r:");
             state = State.READY_FOR_COMMAND;
             return result;
@@ -81,6 +78,8 @@ public abstract class CMUCamConnection {
         } else if (state == State.RUNNING_COMMAND) {
             waitUntil("\r:");
             state = State.READY_FOR_COMMAND;
+        } else if (state == State.NEWLINE_READ) {
+            waitUntil(":");
         } else {
             throw new NotStartedException();
         }
@@ -88,28 +87,33 @@ public abstract class CMUCamConnection {
 
     public boolean sendCommand(String command) throws IOException {
         waitTillReadyForCommand();
+        System.out.println("Sending command " + command);
         state = State.RUNNING_COMMAND;
-        output.write(command + "\r");
+        write(command + "\r");
         String validCommand = readUntil("\r");
         if (validCommand.equals("ACK")) {
             return true;
         } else if (validCommand.equals("NCK")) {
             return false;
         } else {
-            SkyLog.log("Invalid command response, not ACK or NCK: '" + validCommand + "'. Assuming NCK.");
+            log("Invalid command response, not ACK or NCK: '%s'. Assuming NCK.", validCommand);
             return false;
         }
     }
 
     public void waitUntil(String str) throws IOException {
-        waitUntil(str.getBytes(charset));
+        waitUntil(CSUtils.toBytes(str));
+        if (str.endsWith("\r")) {
+            state = State.NEWLINE_READ;
+        }
     }
 
     public String readUntil(String str) throws IOException {
-        return new String(readUntil(str.getBytes(charset)), charset);
+        return CSUtils.toString(readUntil(CSUtils.toBytes(str)));
     }
 
     public void waitUntil(byte[] bytesToMatch) throws IOException {
+        System.out.println();
         if (state == State.NOT_STARTED) {
             throw new NotStartedException();
         }
@@ -120,8 +124,10 @@ public abstract class CMUCamConnection {
             }
             int b = rawInput.read();
             if (b == bytesToMatch[bytesMatched]) {
+                System.out.println("matched one byte");
                 bytesMatched++;
             } else {
+                System.out.println("didn't match byte " + CSUtils.toString((byte) b));
                 bytesMatched = 0;
             }
         }
@@ -153,11 +159,15 @@ public abstract class CMUCamConnection {
             throw new NotStartedException();
         }
         output.write(str);
+        output.flush();
+        rawOutput.flush();
     }
 
     protected abstract void setBaud(int baud) throws IOException;
 
+    protected abstract void close() throws IOException;
+
     private static enum State {
-        READY_FOR_COMMAND, RUNNING_COMMAND, NOT_STARTED;
+        READY_FOR_COMMAND, RUNNING_COMMAND, NEWLINE_READ, NOT_STARTED;
     }
 }
