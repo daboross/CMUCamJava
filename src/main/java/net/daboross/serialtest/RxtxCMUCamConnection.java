@@ -27,27 +27,17 @@ import java.io.IOException;
 public class RxtxCMUCamConnection extends CMUCamConnection {
 
     private final SerialPort port;
-    private final DebugWindow debug = new DebugWindow(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                end();
-            } catch (IOException e) {
-                SkyLog.log("Unexpected IOException", e);
-            }
-        }
-    });
 
     public RxtxCMUCamConnection() throws IOException {
         CommPortIdentifier portIdentifier;
         try {
             portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");
         } catch (NoSuchPortException e) {
-            SkyLog.log("Couldn't find port");
+            debug.log("Couldn't find port");
             throw new IOException(e);
         }
         if (portIdentifier.isCurrentlyOwned()) {
-            SkyLog.err("Port " + portIdentifier.getName() + " is already owned.");
+            debug.log("[Warning] Port " + portIdentifier.getName() + " is already owned.");
             throw new IOException("PortInUse");
         }
         CommPort commPort;
@@ -57,14 +47,11 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
             throw new IOException("Unexpected PortInUseException", e);
         }
         if (!(commPort instanceof SerialPort)) {
-            SkyLog.err("Port not a SerialPort");
+            debug.log("[Warning] Port not a SerialPort");
             throw new ClassCastException();
         }
         port = (SerialPort) commPort;
-//        rawInput = port.getInputStream();
-        rawInput = debug.wrapStream(port.getInputStream());
-//        rawOutput = port.getOutputStream();
-        rawOutput = debug.wrapStream(port.getOutputStream());
+        super.init(port.getInputStream(), port.getOutputStream());
     }
 
     public void setBaud(int baud) throws IOException {

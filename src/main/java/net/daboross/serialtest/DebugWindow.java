@@ -18,11 +18,11 @@ package net.daboross.serialtest;
 
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -30,6 +30,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
+import sun.awt.VariableGridLayout;
 
 public class DebugWindow {
 
@@ -51,6 +52,7 @@ public class DebugWindow {
             }
         });
         panel.setLayout(new FlowLayout());
+        logging.setAutoscrolls(true);
         panel.add(combinedElements(new JLabel("Logging", JLabel.CENTER), logging));
         panel.add(combinedElements(new JLabel("Raw Text", JLabel.CENTER), rawText));
         panel.add(button);
@@ -63,7 +65,7 @@ public class DebugWindow {
     }
 
     private JPanel combinedElements(JComponent... components) {
-        JPanel panel = new JPanel(new GridLayout(components.length, 1));
+        JPanel panel = new JPanel(new VariableGridLayout(components.length, 1));
         for (JComponent component : components) {
             panel.add(component);
         }
@@ -78,12 +80,31 @@ public class DebugWindow {
         addText(CSUtils.toString(b));
     }
 
-    public InputStream wrapStream(InputStream stream) {
+    public InputStream wrapRawStream(InputStream stream) {
         return new DebugInputStream(stream);
     }
 
-    public OutputStream wrapStream(OutputStream stream) {
+    public OutputStream wrapRawStream(OutputStream stream) {
         return new DebugOutputStream(stream);
+    }
+
+    public PrintStream loggingStream() {
+        return new PrintStream(new OutputStream() {
+            @Override
+            public void write(final int b) throws IOException {
+                addText((byte) b);
+                System.out.write(b);
+            }
+        });
+    }
+
+    public void log(String msg, Object... args) {
+        String message = String.format(msg, args);
+        addText(message);
+        System.out.println(message);
+        if (args.length > 0 && args[args.length - 1] instanceof Throwable) {
+            ((Throwable) args[args.length - 1]).printStackTrace(loggingStream());
+        }
     }
 
     private class DebugInputStream extends InputStream {
