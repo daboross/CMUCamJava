@@ -51,8 +51,8 @@ public class DebugWindow {
             }
         });
         panel.setLayout(new FlowLayout());
-        panel.add(combinedElements(new JLabel("Logging"), logging));
-        panel.add(combinedElements(new JLabel("Raw Text"), rawText));
+        panel.add(combinedElements(new JLabel("Logging", JLabel.CENTER), logging));
+        panel.add(combinedElements(new JLabel("Raw Text", JLabel.CENTER), rawText));
         panel.add(button);
         frame.add(panel);
         frame.setTitle("SerialTest Debug");
