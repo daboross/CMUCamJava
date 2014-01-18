@@ -37,7 +37,7 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
             throw new IOException(e);
         }
         if (portIdentifier.isCurrentlyOwned()) {
-            debug.log("[Warning] Port " + portIdentifier.getName() + " is already owned.");
+            debug.log("[Warning] Port '%s' is already owned.", portIdentifier.getName());
             throw new IOException("PortInUse");
         }
         CommPort commPort;
@@ -63,6 +63,9 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
     }
 
     public void close() throws IOException {
+        port.getInputStream().close();
+        port.getOutputStream().close();
+        port.removeEventListener();
         port.close();
     }
 }

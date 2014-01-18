@@ -20,21 +20,19 @@ import java.io.IOException;
 
 public class SerialTestMain implements Runnable {
 
-    @Override
     public void run() {
         try {
             CMUCamConnection c = new RxtxCMUCamConnection();
-            c.debug.log("Created");
+            c.debug.log("[main] Starting");
             c.start();
-            c.debug.log("Started");
+            c.debug.log("[main] Started");
             c.sendCommand("CT 1"); // set Color Tracking mode to YUV
-            c.debug.log("Sent");
             c.sendCommand("AG 0"); // turn off Auto Gain control
-            c.debug.log("Sent");
             c.sendCommand("AW 0"); // turn off Auto White balance
-            c.debug.log("Sent");
             c.sendCommand("ST 237 250 176 193 91 104");
-            c.debug.log(c.readUntil("\r"));
+            c.debug.log("[main] Done setting settings");
+            c.sendCommand("TC");
+            c.debug.log("[main] Text: '%s'", c.readUntil("\r"));
             c.write("\r");
             c.waitTillReadyForCommand();
         } catch (IOException e) {
