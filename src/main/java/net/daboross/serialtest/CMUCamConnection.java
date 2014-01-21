@@ -49,14 +49,14 @@ public abstract class CMUCamConnection {
         if (state != State.NOT_STARTED) {
             return;
         }
-        output = new OutputStreamWriter(rawOutput, CSUtils.CHARSET);
+        output = new OutputStreamWriter(rawOutput, CMUUtils.CHARSET);
         state = State.RUNNING_COMMAND;
         setBaud(19200);
         write("\rRS\r");
-        debug.log("Wrote RS");
+        debug.log("[start] Wrote RS");
         waitUntil("CMUcam4 v");
         String version = readUntil("\r");
-        debug.log("Connected to CMUcam4 version '%s'.", version);
+        debug.log("[start] Connected to CMUcam4 version '%s'.", version);
     }
 
     public void end() throws IOException {
@@ -75,12 +75,12 @@ public abstract class CMUCamConnection {
         if (state == State.READY_FOR_COMMAND) {
             return "";
         } else if (state == State.RUNNING_COMMAND) {
-            debug.log("[readUntilReady] Reading until \\r:");
+//            debug.log("[readUntilReady] Reading until \\r:");
             String result = readUntil("\r:");
             state = State.READY_FOR_COMMAND;
             return result;
         } else if (state == State.NEWLINE_READ) {
-            debug.log("[readUntilReady] Reading until :");
+//            debug.log("[readUntilReady] Reading until :");
             String result = readUntil(":");
             state = State.READY_FOR_COMMAND;
             return result;
@@ -102,7 +102,7 @@ public abstract class CMUCamConnection {
 
     public boolean sendCommand(String command) throws IOException {
         waitTillReadyForCommand();
-        debug.log("[sendCommand] Sending '%s'", command);
+//        debug.log("[sendCommand] Sending '%s'", command);
         state = State.RUNNING_COMMAND;
         write(command + "\r");
         String validCommand = readUntil("\r");
@@ -117,14 +117,14 @@ public abstract class CMUCamConnection {
     }
 
     public void waitUntil(String str) throws IOException {
-        waitUntil(CSUtils.toBytes(str));
+        waitUntil(CMUUtils.toBytes(str));
         if (str.endsWith("\r")) {
             state = State.NEWLINE_READ;
         }
     }
 
     public String readUntil(String str) throws IOException {
-        String result = CSUtils.toString(readUntil(CSUtils.toBytes(str)));
+        String result = CMUUtils.toString(readUntil(CMUUtils.toBytes(str)));
         if (str.endsWith("\r")) {
             state = State.NEWLINE_READ;
         }
@@ -142,10 +142,10 @@ public abstract class CMUCamConnection {
             }
             int b = rawInput.read();
             if (b == bytesToMatch[bytesMatched]) {
-//                debug.log("[waitUntil] Matched " + CSUtils.toString((byte) b));
+//                debug.log("[waitUntil] Matched " + CMUUtils.toString((byte) b));
                 bytesMatched++;
             } else {
-//                debug.log("[waitUntil] Didn't match " + CSUtils.toString((byte) b));
+//                debug.log("[waitUntil] Didn't match " + CMUUtils.toString((byte) b));
                 bytesMatched = 0;
             }
         }
@@ -160,15 +160,15 @@ public abstract class CMUCamConnection {
         while (true) {
             if (bytesMatched >= bytesToMatch.length) {
                 byte[] allBytesRead = outputStream.toByteArray();
-                debug.log("[readUntil] Read '%s'.", CSUtils.toString(allBytesRead));
+//                debug.log("[readUntil] Read '%s'.", CMUUtils.toString(allBytesRead));
                 return Arrays.copyOf(allBytesRead, allBytesRead.length - bytesMatched);
             }
             int b = rawInput.read();
             if (b == bytesToMatch[bytesMatched]) {
-//                debug.log("[readUntil] Matched '%s'.", CSUtils.toString((byte) b));
+//                debug.log("[readUntil] Matched '%s'.", CMUUtils.toString((byte) b));
                 bytesMatched++;
             } else {
-//                debug.log("[readUntil] Didn't match '%s'.", CSUtils.toString((byte) b));
+//                debug.log("[readUntil] Didn't match '%s'.", CMUUtils.toString((byte) b));
                 bytesMatched = 0;
             }
             outputStream.write(b);

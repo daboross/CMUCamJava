@@ -17,8 +17,9 @@
 package net.daboross.serialtest;
 
 import java.nio.charset.Charset;
+import java.util.Collection;
 
-public class CSUtils {
+public class CMUUtils {
 
     public static final Charset CHARSET = Charset.forName("ASCII");
 
@@ -28,5 +29,21 @@ public class CSUtils {
 
     public static String toString(byte... bytes) {
         return new String(bytes, CHARSET);
+    }
+
+    public static int average(int... ints) {
+        int sum = 0;
+        for (int i : ints) {
+            sum += i;
+        }
+        return sum / ints.length;
+    }
+
+    public static int average(Collection<Integer> ints) {
+        int sum = 0;
+        for (int i : ints) {
+            sum += i;
+        }
+        return sum / ints.size();
     }
 }

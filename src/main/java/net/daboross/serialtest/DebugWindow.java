@@ -16,14 +16,17 @@
  */
 package net.daboross.serialtest;
 
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -35,39 +38,49 @@ import javax.swing.text.DefaultCaret;
 public class DebugWindow {
 
     private final JFrame frame = new JFrame();
+    private final JPanel panel = new JPanel();
     private final JTextArea rawText = new JTextArea(30, 40);
     private final JScrollPane rawScroll = new JScrollPane(rawText);
     private final JTextArea loggingText = new JTextArea(30, 40);
     private final JScrollPane loggingScroll = new JScrollPane(loggingText);
+    private final GridBagConstraints constraints = new GridBagConstraints();
 
     public DebugWindow(final Runnable onEnd) {
         frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
-        JPanel panel = new JPanel();
         final Thread mainThread = Thread.currentThread();
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 end(mainThread, onEnd);
             }
         });
-        GridLayout layout = new GridLayout();
-        panel.setLayout(layout);
+        panel.setLayout(new GridBagLayout());
         DefaultCaret loggingCaret = (DefaultCaret) loggingText.getCaret();
         loggingCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         DefaultCaret rawCaret = (DefaultCaret) rawText.getCaret();
         rawCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-        panel.add(label("Logging Text", loggingScroll));
-        panel.add(label("Raw Text", rawScroll));
+        addComponent(label("Logging Text", loggingScroll));
+        addComponent(label("Raw Text", rawScroll));
         frame.add(panel);
         frame.setTitle("SerialTest Debug");
         frame.setVisible(true);
     }
 
     private JPanel label(String labelString, JComponent component) {
-        FlowLayout layout = new FlowLayout();
-        JPanel panel = new JPanel(layout);
-        panel.add(new JLabel(labelString));
-        panel.add(component);
+        GridBagConstraints constraints = new GridBagConstraints();
+        JPanel panel = new JPanel(new GridBagLayout());
+        constraints.anchor = GridBagConstraints.ABOVE_BASELINE;
+        constraints.gridy = 1;
+        panel.add(new JLabel(labelString), constraints);
+        constraints.anchor = GridBagConstraints.BELOW_BASELINE;
+        constraints.gridy = 2;
+        panel.add(component, constraints);
         return panel;
+    }
+
+    public void addComponent(Component component) {
+        constraints.fill = GridBagConstraints.VERTICAL;
+        constraints.gridx++;
+        panel.add(component, constraints);
     }
 
     public void addText(String str) {
@@ -75,7 +88,7 @@ public class DebugWindow {
     }
 
     public void addText(byte b) {
-        addText(CSUtils.toString(b));
+        addText(CMUUtils.toString(b));
     }
 
     public void logText(String str) {
@@ -83,7 +96,7 @@ public class DebugWindow {
     }
 
     public void logText(byte b) {
-        loggingText.append(CSUtils.toString(b).replace("\n", "\\n\n").replace("\r", "\\r\n"));
+        loggingText.append(CMUUtils.toString(b).replace("\n", "\\n\n").replace("\r", "\\r\n"));
     }
 
     public InputStream wrapRawStream(InputStream stream) {
@@ -105,7 +118,7 @@ public class DebugWindow {
     }
 
     public void log(String msg, Object... args) {
-        String message = String.format(msg, args);
+        String message = String.format("[%s] %s", new SimpleDateFormat("HH:mm:ss").format(new Date()), String.format(msg, args));
         logText(message);
         System.out.println(message);
         if (args.length > 0 && args[args.length - 1] instanceof Throwable) {

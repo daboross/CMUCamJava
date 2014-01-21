@@ -20,29 +20,77 @@ import java.io.IOException;
 
 public class SerialTestMain implements Runnable {
 
+    private CMUCamConnection c;
+    private ColorTrack colorTrack;
+
     public void run() {
+        DebugWindow debug = null;
         try {
-            CMUCamConnection c = new RxtxCMUCamConnection();
-            c.debug.log("[main] Starting");
+            c = new RxtxCMUCamConnection();
+            colorTrack = new ColorTrack();
+            debug = c.debug;
+            debug.addComponent(colorTrack.getCanvas());
+            debug.log("[main] Starting");
             c.start();
-            c.debug.log("[main] Started");
+            debug.log("[main] Started");
             c.sendCommand("CT 1"); // set Color Tracking mode to YUV
             c.sendCommand("AG 0"); // turn off Auto Gain control
             c.sendCommand("AW 0"); // turn off Auto White balance
-            c.sendCommand("ST 237 250 176 193 91 104");
-            c.debug.log("[main] Done setting settings");
+            c.sendCommand("ST 150 167 18 29 104 118");
+            debug.log("[main] Done setting settings");
             c.sendCommand("TC");
-            c.debug.log("[main] Text: '%s'", c.readUntil("\r"));
-            c.write("\r");
-            c.waitTillReadyForCommand();
-        } catch (IOException e) {
+            TrackingRead read = new TrackingRead();
+            new Thread(read).start();
+            for (int i = 0; i < 500; i++) {
+                debug.log("[main] Text: '%s'", read.lastResponse);
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    debug.log("Unexpected InterruptedException", e);
+                }
+            }
+            read.running = false;
+        } catch (IOException ex) {
             System.err.println("Unexpected IOException running");
-            e.printStackTrace();
+            if (debug != null) {
+                ex.printStackTrace(debug.loggingStream());
+            } else {
+                ex.printStackTrace();
+            }
+        } catch (RuntimeException ex) {
+            if (debug != null) {
+                ex.printStackTrace(debug.loggingStream());
+            } else {
+                ex.printStackTrace();
+            }
         }
     }
 
     public static void main(String[] args) {
         SerialTestMain main = new SerialTestMain();
         new Thread(main).start();
+    }
+
+    private class TrackingRead implements Runnable {
+
+        private boolean running = true;
+        private String lastResponse = "";
+
+        public void run() {
+            try {
+                while (running) {
+                    lastResponse = c.readUntil("\r");
+                    try {
+                        colorTrack.update(lastResponse);
+                    } catch (IllegalArgumentException ex) {
+                        ex.printStackTrace(c.debug.loggingStream());
+                    }
+                }
+                c.write("\r");
+                c.readUntilReady();
+            } catch (IOException e) {
+                c.debug.log("Unexpected IOExceptoin in TrackingRead", e);
+            }
+        }
     }
 }
