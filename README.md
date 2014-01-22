@@ -1,11 +1,11 @@
-SerialTest
+CMUCamJava
 ==========
 
-This is Serial Testing for CMUCam4.
+This is testing for CMUCam4.
 
-Working pretty well, even has a debug JFrame!
+You need to install the rxtx native java library to use.
 
-You need to install the rxtx native java library first.
+Will be ported to frc.
 
 To run this program:
 ==
