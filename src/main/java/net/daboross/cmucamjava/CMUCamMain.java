@@ -14,11 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.daboross.serialtest;
+package net.daboross.cmucamjava;
 
 import java.io.IOException;
 
-public class SerialTestMain {
+public class CMUCamMain {
 
     public static void main(String[] args) throws IOException {
         // TODO: Is there a better way to store a variable like this rather than a [1] array?

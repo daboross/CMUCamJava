@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.daboross</groupId>
-    <artifactId>serial-test</artifactId>
+    <artifactId>cmucam-java</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 
-    <name>SerialTest</name>
+    <name>CMUCam Java</name>
     <inceptionYear>2013</inceptionYear>
     <licenses>
         <license>
@@ -28,19 +28,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>repo-daboross-net</id>
-            <url>http://azd.daboross.net/</url>
-        </repository>
-    </repositories>
     <dependencies>
         <dependency>
             <groupId>rxtx</groupId>
             <artifactId>rxtx</artifactId>
             <version>mfz-2.2</version>
-            <!--<version>mfz-2.2</version>-->
-            <!--<version>2.1-7-r2</version>-->
         </dependency>
         <dependency>
             <groupId>org.swinglabs</groupId>
@@ -68,7 +60,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>net.daboross.serialtest.SerialTestMain</mainClass>
+                            <mainClass>net.daboross.cmucamjava.CMUCamMain</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
