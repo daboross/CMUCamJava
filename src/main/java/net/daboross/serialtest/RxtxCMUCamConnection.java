@@ -28,7 +28,8 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
 
     private final SerialPort port;
 
-    public RxtxCMUCamConnection() throws IOException {
+    public RxtxCMUCamConnection(Runnable endingRunnable) throws IOException {
+        super(endingRunnable);
         CommPortIdentifier portIdentifier;
         try {
             portIdentifier = CommPortIdentifier.getPortIdentifier("/dev/ttyUSB0");

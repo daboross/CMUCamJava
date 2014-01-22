@@ -18,79 +18,28 @@ package net.daboross.serialtest;
 
 import java.io.IOException;
 
-public class SerialTestMain implements Runnable {
+public class SerialTestMain {
 
-    private CMUCamConnection c;
-    private ColorTrack colorTrack;
-
-    public void run() {
-        DebugWindow debug = null;
-        try {
-            c = new RxtxCMUCamConnection();
-            colorTrack = new ColorTrack();
-            debug = c.debug;
-            debug.addComponent(colorTrack.getCanvas());
-            debug.log("[main] Starting");
-            c.start();
-            debug.log("[main] Started");
-            c.sendCommand("CT 1"); // set Color Tracking mode to YUV
-            c.sendCommand("AG 0"); // turn off Auto Gain control
-            c.sendCommand("AW 0"); // turn off Auto White balance
-            c.sendCommand("ST 150 167 18 29 104 118");
-            debug.log("[main] Done setting settings");
-            c.sendCommand("TC");
-            TrackingRead read = new TrackingRead();
-            new Thread(read).start();
-            for (int i = 0; i < 500; i++) {
-                debug.log("[main] Text: '%s'", read.lastResponse);
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    debug.log("Unexpected InterruptedException", e);
-                }
-            }
-            read.running = false;
-        } catch (IOException ex) {
-            System.err.println("Unexpected IOException running");
-            if (debug != null) {
-                ex.printStackTrace(debug.loggingStream());
-            } else {
-                ex.printStackTrace();
-            }
-        } catch (RuntimeException ex) {
-            if (debug != null) {
-                ex.printStackTrace(debug.loggingStream());
-            } else {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    public static void main(String[] args) {
-        SerialTestMain main = new SerialTestMain();
-        new Thread(main).start();
-    }
-
-    private class TrackingRead implements Runnable {
-
-        private boolean running = true;
-        private String lastResponse = "";
-
-        public void run() {
-            try {
-                while (running) {
-                    lastResponse = c.readUntil("\r");
+    public static void main(String[] args) throws IOException {
+        // TODO: Is there a better way to store a variable like this rather than a [1] array?
+        final CMUColorTracking[] trackingStore = new CMUColorTracking[1];
+        CMUCamConnection c = new RxtxCMUCamConnection(new Runnable() {
+            public void run() {
+                if (trackingStore[0] != null) {
                     try {
-                        colorTrack.update(lastResponse);
-                    } catch (IllegalArgumentException ex) {
-                        ex.printStackTrace(c.debug.loggingStream());
+                        trackingStore[0].stopTracking();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
-                c.write("\r");
-                c.readUntilReady();
-            } catch (IOException e) {
-                c.debug.log("Unexpected IOExceptoin in TrackingRead", e);
             }
-        }
+        });
+        c.debug.log("[main] Starting");
+        CMUColorTracking tracking = new CMUColorTracking(c, 10);
+        trackingStore[0] = tracking;
+        ColorTrackingPanel panel = new ColorTrackingPanel();
+        c.debug.addComponent(panel);
+        tracking.addColorTrackingUpdatable(panel);
+        tracking.startTracking();
     }
 }

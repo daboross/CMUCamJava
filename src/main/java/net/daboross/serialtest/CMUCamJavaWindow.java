@@ -19,6 +19,7 @@ package net.daboross.serialtest;
 import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -27,6 +28,8 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import javax.swing.AbstractAction;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -34,8 +37,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.text.DefaultCaret;
+import org.jdesktop.swingx.JXCollapsiblePane;
 
-public class DebugWindow {
+public class CMUCamJavaWindow {
 
     private final JFrame frame = new JFrame();
     private final JPanel panel = new JPanel();
@@ -45,7 +49,7 @@ public class DebugWindow {
     private final JScrollPane loggingScroll = new JScrollPane(loggingText);
     private final GridBagConstraints constraints = new GridBagConstraints();
 
-    public DebugWindow(final Runnable onEnd) {
+    public CMUCamJavaWindow(final Runnable onEnd) {
         frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
         final Thread mainThread = Thread.currentThread();
         frame.addWindowListener(new WindowAdapter() {
@@ -61,7 +65,7 @@ public class DebugWindow {
         addComponent(label("Logging Text", loggingScroll));
         addComponent(label("Raw Text", rawScroll));
         frame.add(panel);
-        frame.setTitle("SerialTest Debug");
+        frame.setTitle("CMUCam Java");
         frame.setVisible(true);
     }
 
@@ -73,7 +77,24 @@ public class DebugWindow {
         panel.add(new JLabel(labelString), constraints);
         constraints.anchor = GridBagConstraints.BELOW_BASELINE;
         constraints.gridy = 2;
-        panel.add(component, constraints);
+        final JXCollapsiblePane container = new JXCollapsiblePane();
+        container.add(component);
+        final JButton collapse = new JButton("Hide");
+        collapse.addActionListener(new AbstractAction() {
+            public void actionPerformed(final ActionEvent e) {
+                if (container.isCollapsed()) {
+                    container.setCollapsed(false);
+                    collapse.setText("Hide");
+                } else {
+                    container.setCollapsed(true);
+                    collapse.setText("Show");
+                }
+            }
+        });
+        panel.add(container, constraints);
+        constraints.anchor = GridBagConstraints.BELOW_BASELINE;
+        constraints.gridy = 3;
+        panel.add(collapse, constraints);
         return panel;
     }
 

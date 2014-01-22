@@ -30,15 +30,22 @@ public abstract class CMUCamConnection {
     private OutputStream rawOutput;
     private Writer output;
     private State state = State.NOT_STARTED;
-    public final DebugWindow debug = new DebugWindow(new Runnable() {
-        public void run() {
-            try {
-                end();
-            } catch (IOException e) {
-                debug.log("Unexpected IOException", e);
+    public final CMUCamJavaWindow debug;
+
+    protected CMUCamConnection(final Runnable endingRunnable) {
+        debug = new CMUCamJavaWindow(new Runnable() {
+            public void run() {
+                try {
+                    if (endingRunnable != null) {
+                        endingRunnable.run();
+                    }
+                    end();
+                } catch (IOException e) {
+                    debug.log("Unexpected IOException", e);
+                }
             }
-        }
-    });
+        });
+    }
 
     protected void init(InputStream rawInput, OutputStream rawOutput) {
         this.rawInput = debug.wrapRawStream(rawInput);
@@ -46,17 +53,14 @@ public abstract class CMUCamConnection {
     }
 
     public void start() throws IOException {
-        if (state != State.NOT_STARTED) {
-            return;
-        }
         output = new OutputStreamWriter(rawOutput, CMUUtils.CHARSET);
         state = State.RUNNING_COMMAND;
         setBaud(19200);
         write("\rRS\r");
-        debug.log("[start] Wrote RS");
+        debug.log("[reset] Resetting system");
         waitUntil("CMUcam4 v");
         String version = readUntil("\r");
-        debug.log("[start] Connected to CMUcam4 version '%s'.", version);
+        debug.log("[reset] Connected to CMUcam4 version '%s'.", version);
     }
 
     public void end() throws IOException {
@@ -75,17 +79,15 @@ public abstract class CMUCamConnection {
         if (state == State.READY_FOR_COMMAND) {
             return "";
         } else if (state == State.RUNNING_COMMAND) {
-//            debug.log("[readUntilReady] Reading until \\r:");
             String result = readUntil("\r:");
             state = State.READY_FOR_COMMAND;
             return result;
         } else if (state == State.NEWLINE_READ) {
-//            debug.log("[readUntilReady] Reading until :");
             String result = readUntil(":");
             state = State.READY_FOR_COMMAND;
             return result;
         } else {
-            throw new NotStartedException();
+            throw new IllegalStateException("Not started");
         }
     }
 
@@ -96,7 +98,7 @@ public abstract class CMUCamConnection {
         } else if (state == State.NEWLINE_READ) {
             waitUntil(":");
         } else if (state != State.READY_FOR_COMMAND) {
-            throw new NotStartedException();
+            throw new IllegalStateException("Not started");
         }
     }
 
@@ -133,7 +135,7 @@ public abstract class CMUCamConnection {
 
     public void waitUntil(byte[] bytesToMatch) throws IOException {
         if (state == State.NOT_STARTED) {
-            throw new NotStartedException();
+            throw new IllegalStateException("Not started");
         }
         int bytesMatched = 0;
         while (true) {
@@ -142,10 +144,8 @@ public abstract class CMUCamConnection {
             }
             int b = rawInput.read();
             if (b == bytesToMatch[bytesMatched]) {
-//                debug.log("[waitUntil] Matched " + CMUUtils.toString((byte) b));
                 bytesMatched++;
             } else {
-//                debug.log("[waitUntil] Didn't match " + CMUUtils.toString((byte) b));
                 bytesMatched = 0;
             }
         }
@@ -153,22 +153,19 @@ public abstract class CMUCamConnection {
 
     public byte[] readUntil(byte[] bytesToMatch) throws IOException {
         if (state == State.NOT_STARTED) {
-            throw new NotStartedException();
+            throw new IllegalStateException("Not started");
         }
         int bytesMatched = 0;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         while (true) {
             if (bytesMatched >= bytesToMatch.length) {
                 byte[] allBytesRead = outputStream.toByteArray();
-//                debug.log("[readUntil] Read '%s'.", CMUUtils.toString(allBytesRead));
                 return Arrays.copyOf(allBytesRead, allBytesRead.length - bytesMatched);
             }
             int b = rawInput.read();
             if (b == bytesToMatch[bytesMatched]) {
-//                debug.log("[readUntil] Matched '%s'.", CMUUtils.toString((byte) b));
                 bytesMatched++;
             } else {
-//                debug.log("[readUntil] Didn't match '%s'.", CMUUtils.toString((byte) b));
                 bytesMatched = 0;
             }
             outputStream.write(b);
@@ -177,7 +174,7 @@ public abstract class CMUCamConnection {
 
     public void write(String str) throws IOException {
         if (state == State.NOT_STARTED) {
-            throw new NotStartedException();
+            throw new IllegalStateException("Not started");
         }
         output.write(str);
         output.flush();

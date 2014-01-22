@@ -17,26 +17,21 @@
 package net.daboross.serialtest;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.util.LinkedList;
-import java.util.Queue;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-public class ColorTrack {
+public class ColorTrackingPanel extends JPanel implements CMUColorTracking.ColorTrackingUpdatable {
 
-    private final JPanel panel;
     private final ColorTrackingCanvas canvas;
     private final JLabel[] labels;
-    private final Queue<Integer>[] pastValues = new Queue[6];
 
-    public ColorTrack() {
-        panel = new JPanel(new GridBagLayout());
+    public ColorTrackingPanel() {
+        super(new GridBagLayout());
         canvas = new ColorTrackingCanvas();
         JPanel textPanel = new JPanel(new GridLayout(2, 3, 10, 10));
         labels = new JLabel[6];
@@ -47,38 +42,13 @@ public class ColorTrack {
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.anchor = GridBagConstraints.ABOVE_BASELINE;
         constraints.gridy = 1;
-        panel.add(canvas, constraints);
+        add(canvas, constraints);
         constraints.anchor = GridBagConstraints.BELOW_BASELINE;
         constraints.gridy = 2;
-        panel.add(textPanel, constraints);
-        for (int i = 0; i < pastValues.length; i++) {
-            pastValues[i] = new LinkedList<Integer>();
-        }
+        add(textPanel, constraints);
     }
 
-    public void update(String str) {
-        if (!str.startsWith("T")) {
-            throw new IllegalArgumentException("Invalid data format");
-        }
-        String[] packets = str.trim().split(" ");
-        int[] values = new int[pastValues.length];// int averageX, averageY, leftX, topY, rightX, bottomY;
-        try {
-            //averageX
-            values[0] = Integer.parseInt(packets[1]);
-            //averageY
-            values[1] = Integer.parseInt(packets[2]);
-            //leftX
-            values[2] = Integer.parseInt(packets[3]);
-            //topY
-            values[3] = Integer.parseInt(packets[4]);
-            //rightX
-            values[4] = Integer.parseInt(packets[5]);
-            //bottomY
-            values[5] = Integer.parseInt(packets[6]);
-        } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Invalid number format ", ex);
-        }
-        values = getAverages(values);
+    public void update(int[] values) {
         labels[0].setText(String.format("AverageX = %05d", values[0]));
         labels[1].setText(String.format("LeftX = %05d", values[2]));
         labels[2].setText(String.format("TopY = %05d", values[3]));
@@ -92,23 +62,6 @@ public class ColorTrack {
         canvas.setTopY(values[3] * 2);
         canvas.setBottomY(values[5] * 2);
         canvas.repaint();
-    }
-
-    private int[] getAverages(int[] newValues) {
-        int[] averages = new int[pastValues.length];
-        for (int i = 0; i < pastValues.length; i++) {
-            Queue<Integer> queue = pastValues[i];
-            queue.add(newValues[i]);
-            if (queue.size() > 5) {
-                queue.poll();
-            }
-            averages[i] = CMUUtils.average(queue);
-        }
-        return averages;
-    }
-
-    public Component getCanvas() {
-        return panel;
     }
 
     private static class ColorTrackingCanvas extends JPanel {
