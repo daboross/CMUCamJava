@@ -1,2 +1,2 @@
 #!/bin/sh
-java -jar target/serial-test-0.1.0-SNAPSHOT.jar
+java -jar target/cmucam-java-0.1.0-SNAPSHOT.jar
