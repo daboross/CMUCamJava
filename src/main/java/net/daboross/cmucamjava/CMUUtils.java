@@ -31,7 +31,6 @@ public class CMUUtils {
         return new String(bytes, CHARSET);
     }
 
-
     public static int average(Collection<Integer> ints) {
         int sum = 0;
         for (int i : ints) {

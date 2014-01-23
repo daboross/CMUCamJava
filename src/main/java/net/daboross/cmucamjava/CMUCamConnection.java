@@ -64,23 +64,7 @@ public abstract class CMUCamConnection {
         state = State.NOT_STARTED;
     }
 
-    public String readUntilReady() throws IOException {
-        if (state == State.READY_FOR_COMMAND) {
-            return "";
-        } else if (state == State.RUNNING_COMMAND) {
-            String result = readUntil("\r:");
-            state = State.READY_FOR_COMMAND;
-            return result;
-        } else if (state == State.NEWLINE_READ) {
-            String result = readUntil(":");
-            state = State.READY_FOR_COMMAND;
-            return result;
-        } else {
-            throw new IllegalStateException("Not started");
-        }
-    }
-
-    public void waitTillReadyForCommand() throws IOException {
+    private void waitTillReadyForCommand() throws IOException {
         if (state == State.RUNNING_COMMAND) {
             waitUntil("\r:");
             state = State.READY_FOR_COMMAND;
@@ -93,7 +77,6 @@ public abstract class CMUCamConnection {
 
     public boolean sendCommand(String command) throws IOException {
         waitTillReadyForCommand();
-//        debug.log("[sendCommand] Sending '%s'", command);
         state = State.RUNNING_COMMAND;
         write(command + "\r");
         String validCommand = readUntil("\r");
@@ -111,6 +94,8 @@ public abstract class CMUCamConnection {
         waitUntil(CMUUtils.toBytes(str));
         if (str.endsWith("\r")) {
             state = State.NEWLINE_READ;
+        } else if (str.endsWith("\r:")) {
+            state = State.READY_FOR_COMMAND;
         }
     }
 
@@ -118,6 +103,8 @@ public abstract class CMUCamConnection {
         String result = CMUUtils.toString(readUntil(CMUUtils.toBytes(str)));
         if (str.endsWith("\r")) {
             state = State.NEWLINE_READ;
+        } else if (str.endsWith("\r:")) {
+            state = State.READY_FOR_COMMAND;
         }
         return result;
     }

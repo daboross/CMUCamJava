@@ -110,10 +110,6 @@ public class CMUColorTracking {
         }
     }
 
-    public int[] getCurrentAverages() {
-        return averages;
-    }
-
     public interface ColorTrackingUpdatable {
 
         /**
