@@ -20,25 +20,39 @@ import java.io.IOException;
 
 public class CMUCamMain {
 
+    private CMUColorTracking tracking;
+    private ColorTrackingPanel panel;
+    private CMUCamJavaWindow debug;
+    private CMUCamConnection cmu;
+
     public static void main(String[] args) throws IOException {
-        // TODO: Is there a better way to store a variable like this rather than a [1] array?
-        final CMUColorTracking[] trackingStore = new CMUColorTracking[1];
-        CMUCamConnection c = new RxtxCMUCamConnection(new Runnable() {
+        new CMUCamMain().start();
+    }
+
+    public void start() throws IOException {
+        debug = new CMUCamJavaWindow(new Runnable() {
             public void run() {
-                if (trackingStore[0] != null) {
+                if (tracking != null) {
                     try {
-                        trackingStore[0].stopTracking();
+                        tracking.stopTracking();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (cmu != null) {
+                    try {
+                        cmu.end();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
             }
         });
-        c.debug.log("[main] Starting");
-        CMUColorTracking tracking = new CMUColorTracking(c, 10);
-        trackingStore[0] = tracking;
-        ColorTrackingPanel panel = new ColorTrackingPanel();
-        c.debug.addComponent(panel);
+        cmu = new RxtxCMUCamConnection(debug);
+        debug.log("[main] Starting");
+        tracking = new CMUColorTracking(cmu, 10);
+        panel = new ColorTrackingPanel();
+        debug.addComponent(panel);
         tracking.addColorTrackingUpdatable(panel);
         tracking.startTracking();
     }

@@ -30,21 +30,10 @@ public abstract class CMUCamConnection {
     private OutputStream rawOutput;
     private Writer output;
     private State state = State.NOT_STARTED;
-    public final CMUCamJavaWindow debug;
+    public final AbstractDebug debug;
 
-    protected CMUCamConnection(final Runnable endingRunnable) {
-        debug = new CMUCamJavaWindow(new Runnable() {
-            public void run() {
-                try {
-                    if (endingRunnable != null) {
-                        endingRunnable.run();
-                    }
-                    end();
-                } catch (IOException e) {
-                    debug.log("Unexpected IOException", e);
-                }
-            }
-        });
+    protected CMUCamConnection(final AbstractDebug debug) {
+        this.debug = debug;
     }
 
     protected void init(InputStream rawInput, OutputStream rawOutput) {
@@ -70,8 +59,8 @@ public abstract class CMUCamConnection {
         rawInput.close();
         output.close();
         rawOutput.close();
-        debug.log("Closing");
         close();
+        debug.log("Done closing");
         state = State.NOT_STARTED;
     }
 

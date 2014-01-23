@@ -39,22 +39,20 @@ import javax.swing.JTextArea;
 import javax.swing.text.DefaultCaret;
 import org.jdesktop.swingx.JXCollapsiblePane;
 
-public class CMUCamJavaWindow {
+public class CMUCamJavaWindow implements AbstractDebug {
 
+    private final GridBagConstraints constraints = new GridBagConstraints();
+    private final JTextArea loggingText = new JTextArea(30, 40);
+    private final JTextArea rawText = new JTextArea(30, 40);
     private final JFrame frame = new JFrame();
     private final JPanel panel = new JPanel();
-    private final JTextArea rawText = new JTextArea(30, 40);
-    private final JScrollPane rawScroll = new JScrollPane(rawText);
-    private final JTextArea loggingText = new JTextArea(30, 40);
-    private final JScrollPane loggingScroll = new JScrollPane(loggingText);
-    private final GridBagConstraints constraints = new GridBagConstraints();
 
     public CMUCamJavaWindow(final Runnable onEnd) {
+        constraints.fill = GridBagConstraints.VERTICAL;
         frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
-        final Thread mainThread = Thread.currentThread();
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                end(mainThread, onEnd);
+                end(onEnd);
             }
         });
         panel.setLayout(new GridBagLayout());
@@ -62,36 +60,37 @@ public class CMUCamJavaWindow {
         loggingCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         DefaultCaret rawCaret = (DefaultCaret) rawText.getCaret();
         rawCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-        addComponent(label("Logging Text", loggingScroll));
-        addComponent(label("Raw Text", rawScroll));
+        addComponent(prepareLogging("Logging Text", loggingText));
+        addComponent(prepareLogging("Raw Text", rawText));
         frame.add(panel);
         frame.setTitle("CMUCam Java");
         frame.setVisible(true);
     }
 
-    private JPanel label(String labelString, JComponent component) {
+    private JPanel prepareLogging(final String label, JComponent component) {
+        final JButton collapse = new JButton("Hide");
+        final JXCollapsiblePane collapsiblePane = new JXCollapsiblePane();
+        collapsiblePane.add(new JScrollPane(component));
+        collapse.addActionListener(new AbstractAction() {
+            public void actionPerformed(final ActionEvent e) {
+                if (collapsiblePane.isCollapsed()) {
+                    collapsiblePane.setCollapsed(false);
+                    collapse.setText("Hide");
+                } else {
+                    collapsiblePane.setCollapsed(true);
+                    collapse.setText(label);
+                }
+            }
+        });
+
         GridBagConstraints constraints = new GridBagConstraints();
         JPanel panel = new JPanel(new GridBagLayout());
         constraints.anchor = GridBagConstraints.ABOVE_BASELINE;
         constraints.gridy = 1;
-        panel.add(new JLabel(labelString), constraints);
+        panel.add(new JLabel(label), constraints);
         constraints.anchor = GridBagConstraints.BELOW_BASELINE;
         constraints.gridy = 2;
-        final JXCollapsiblePane container = new JXCollapsiblePane();
-        container.add(component);
-        final JButton collapse = new JButton("Hide");
-        collapse.addActionListener(new AbstractAction() {
-            public void actionPerformed(final ActionEvent e) {
-                if (container.isCollapsed()) {
-                    container.setCollapsed(false);
-                    collapse.setText("Hide");
-                } else {
-                    container.setCollapsed(true);
-                    collapse.setText("Show");
-                }
-            }
-        });
-        panel.add(container, constraints);
+        panel.add(collapsiblePane, constraints);
         constraints.anchor = GridBagConstraints.BELOW_BASELINE;
         constraints.gridy = 3;
         panel.add(collapse, constraints);
@@ -99,25 +98,18 @@ public class CMUCamJavaWindow {
     }
 
     public void addComponent(Component component) {
-        constraints.fill = GridBagConstraints.VERTICAL;
         constraints.gridx++;
         panel.add(component, constraints);
     }
 
-    public void addText(String str) {
-        rawText.append(str.replace("\n", "\\n\n").replace("\r", "\\r\n"));
-    }
-
-    public void addText(byte b) {
-        addText(CMUUtils.toString(b));
-    }
-
-    public void logText(String str) {
-        loggingText.append(str.replace("\r", "\\r").replace("\n", "\\n") + "\n");
-    }
-
-    public void logText(byte b) {
-        loggingText.append(CMUUtils.toString(b).replace("\n", "\\n\n").replace("\r", "\\r\n"));
+    private void addRawText(byte b) {
+        String text = CMUUtils.toString(b);
+        if (text.equals("\n")) {
+            text = "\\n\n";
+        } else if (text.equals("\r")) {
+            text = "\\r\n";
+        }
+        rawText.append(text);
     }
 
     public InputStream wrapRawStream(InputStream stream) {
@@ -132,18 +124,20 @@ public class CMUCamJavaWindow {
         return new PrintStream(new OutputStream() {
             @Override
             public void write(final int b) throws IOException {
-                logText((byte) b);
+                loggingText.append(CMUUtils.toString((byte) b));
                 System.out.write(b);
             }
         });
     }
 
     public void log(String msg, Object... args) {
-        String message = String.format("[%s] %s", new SimpleDateFormat("HH:mm:ss").format(new Date()), String.format(msg, args));
-        logText(message);
-        System.out.println(message);
-        if (args.length > 0 && args[args.length - 1] instanceof Throwable) {
-            ((Throwable) args[args.length - 1]).printStackTrace(loggingStream());
+        String message = String.format("[%s] %s\n", new SimpleDateFormat("HH:mm:ss").format(new Date()), String.format(msg, args));
+        loggingText.append(message);
+        System.out.print(message);
+        for (Object arg : args) {
+            if (arg instanceof Throwable) {
+                ((Throwable) arg).printStackTrace(loggingStream());
+            }
         }
     }
 
@@ -158,8 +152,14 @@ public class CMUCamJavaWindow {
         @Override
         public int read() throws IOException {
             int b = stream.read();
-            addText((byte) b);
+            addRawText((byte) b);
             return b;
+        }
+
+        @Override
+        public void close() throws IOException {
+            stream.close();
+            super.close();
         }
     }
 
@@ -173,27 +173,37 @@ public class CMUCamJavaWindow {
 
         @Override
         public void write(final int b) throws IOException {
-            addText((byte) b);
+            addRawText((byte) b);
             stream.write(b);
+        }
+
+        @Override
+        public void close() throws IOException {
+            stream.close();
+            super.close();
         }
     }
 
-    public void end(final Thread mainThread, final Runnable onEnd) {
+    public void end(final Runnable onEnd) {
+        final Object lock = new Object();
         new Thread(new Runnable() {
             public void run() {
-                log("Ending");
-                mainThread.interrupt();
+                log("[final] Ending");
                 onEnd.run();
-                log("Exiting");
-                System.exit(0);
+                log("[final] Exited cleanly");
+                synchronized (lock) {
+                    lock.notify();
+                }
             }
         }).start();
         frame.setVisible(false);
         frame.dispose();
         try {
-            Thread.sleep(500);
+            synchronized (lock) {
+                lock.wait(500);
+            }
         } catch (InterruptedException ex) {
-            log("Unexpected InterruptedException", ex);
+            ex.printStackTrace();
         }
         System.exit(0);
     }

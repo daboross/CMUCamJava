@@ -60,7 +60,9 @@ public class CMUColorTracking {
 
     public void stopTracking() throws IOException {
         currentlyTracking = false;
-        thread.interrupt();
+        if (thread != null) {
+            thread.interrupt();
+        }
         c.write("\r");
     }
 
