@@ -14,15 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.daboross.cmucamjava;
+package net.daboross.cmucamjava.desktop;
 
 import java.io.IOException;
+import net.daboross.cmucamjava.CMUCamConnection;
+import net.daboross.cmucamjava.CMUColorTracking;
 
 public class CMUCamMain {
 
     private CMUColorTracking tracking;
     private ColorTrackingPanel panel;
-    private CMUCamJavaWindow debug;
+    private CMUCamWindow debug;
     private CMUCamConnection cmu;
 
     public static void main(String[] args) throws IOException {
@@ -30,7 +32,7 @@ public class CMUCamMain {
     }
 
     public void start() throws IOException {
-        debug = new CMUCamJavaWindow(new Runnable() {
+        debug = new CMUCamWindow(new Runnable() {
             public void run() {
                 if (tracking != null) {
                     try {

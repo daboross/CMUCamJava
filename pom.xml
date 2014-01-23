@@ -60,7 +60,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>net.daboross.cmucamjava.CMUCamMain</mainClass>
+                            <mainClass>net.daboross.cmucamjava.desktop.CMUCamMain</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

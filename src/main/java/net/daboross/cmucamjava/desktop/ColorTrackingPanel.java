@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.daboross.cmucamjava;
+package net.daboross.cmucamjava.desktop;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -24,6 +24,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import net.daboross.cmucamjava.CMUColorTracking;
 
 public class ColorTrackingPanel extends JPanel implements CMUColorTracking.ColorTrackingUpdatable {
 

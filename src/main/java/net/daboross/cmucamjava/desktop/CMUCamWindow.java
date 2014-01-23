@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.daboross.cmucamjava;
+package net.daboross.cmucamjava.desktop;
 
 import java.awt.Component;
 import java.awt.GridBagConstraints;
@@ -37,9 +37,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.text.DefaultCaret;
+import net.daboross.cmucamjava.AbstractDebug;
+import net.daboross.cmucamjava.CMUUtils;
 import org.jdesktop.swingx.JXCollapsiblePane;
 
-public class CMUCamJavaWindow implements AbstractDebug {
+public class CMUCamWindow implements AbstractDebug {
 
     private final GridBagConstraints constraints = new GridBagConstraints();
     private final JTextArea loggingText = new JTextArea(30, 40);
@@ -47,7 +49,7 @@ public class CMUCamJavaWindow implements AbstractDebug {
     private final JFrame frame = new JFrame();
     private final JPanel panel = new JPanel();
 
-    public CMUCamJavaWindow(final Runnable onEnd) {
+    public CMUCamWindow(final Runnable onEnd) {
         constraints.fill = GridBagConstraints.VERTICAL;
         frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
         frame.addWindowListener(new WindowAdapter() {

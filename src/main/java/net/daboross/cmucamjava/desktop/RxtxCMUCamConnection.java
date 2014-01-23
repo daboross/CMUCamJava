@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.daboross.cmucamjava;
+package net.daboross.cmucamjava.desktop;
 
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
@@ -23,6 +23,8 @@ import gnu.io.PortInUseException;
 import gnu.io.SerialPort;
 import gnu.io.UnsupportedCommOperationException;
 import java.io.IOException;
+import net.daboross.cmucamjava.AbstractDebug;
+import net.daboross.cmucamjava.CMUCamConnection;
 
 public class RxtxCMUCamConnection extends CMUCamConnection {
 
