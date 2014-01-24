@@ -23,16 +23,18 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Arrays;
+import net.daboross.cmucamjava.api.CMUCommandSet;
 
 public abstract class CMUCamConnection {
 
+    private final Object lock = new Object();
     private InputStream rawInput;
     private OutputStream rawOutput;
     private Writer output;
     private State state = State.NOT_STARTED;
     public final AbstractDebug debug;
 
-    protected CMUCamConnection(final AbstractDebug debug) {
+    public CMUCamConnection(final AbstractDebug debug) {
         this.debug = debug;
     }
 
@@ -42,119 +44,143 @@ public abstract class CMUCamConnection {
     }
 
     public void start() throws IOException {
-        output = new OutputStreamWriter(rawOutput, CMUUtils.CHARSET);
-        state = State.RUNNING_COMMAND;
-        setBaud(19200);
-        write("\rRS\r");
-        debug.log("[reset] Resetting system");
-        waitUntil("CMUcam4 v");
-        String version = readUntil("\r");
-        debug.log("[reset] Connected to CMUcam4 version '%s'.", version);
+        synchronized (lock) {
+            output = new OutputStreamWriter(rawOutput, CMUUtils.CHARSET);
+            state = State.RUNNING_COMMAND;
+            setBaud(19200);
+            write("\rRS\r");
+            debug.log("[cmu] Resetting system");
+            waitUntil("CMUcam4 v");
+            String version = readUntil("\r");
+            debug.log("[cmu] Connected to CMUcam4 version '%s'.", version);
+        }
     }
 
     public void end() throws IOException {
-        if (state == State.NOT_STARTED) {
-            return;
+        synchronized (lock) {
+            if (state == State.NOT_STARTED) {
+                return;
+            }
+            state = State.NOT_STARTED;
+            rawInput.close();
+            output.close();
+            rawOutput.close();
+            close();
+            debug.log("[cmu] Closed");
         }
-        rawInput.close();
-        output.close();
-        rawOutput.close();
-        close();
-        debug.log("Done closing");
-        state = State.NOT_STARTED;
     }
 
-    private void waitTillReadyForCommand() throws IOException {
-        if (state == State.RUNNING_COMMAND) {
-            waitUntil("\r:");
-            state = State.READY_FOR_COMMAND;
-        } else if (state == State.NEWLINE_READ) {
-            waitUntil(":");
-        } else if (state != State.READY_FOR_COMMAND) {
-            throw new IllegalStateException("Not started");
+    public void runCommandSet(CMUCommandSet set) throws IOException {
+        synchronized (lock) {
+            debug.log("[cmu] Running command set");
+            set.init(this);
+            while (state != State.NOT_STARTED) {
+                if (!set.runWith(this)) {
+                    break;
+                }
+            }
+            set.end(this);
         }
     }
 
     public boolean sendCommand(String command) throws IOException {
-        waitTillReadyForCommand();
-        state = State.RUNNING_COMMAND;
-        write(command + "\r");
-        String validCommand = readUntil("\r");
-        if (validCommand.equals("ACK")) {
-            return true;
-        } else if (validCommand.equals("NCK")) {
-            return false;
-        } else {
-            debug.log("[sendCommand] Invalid command response, not ACK or NCK: '%s'. Assuming NCK.", validCommand);
-            return false;
+        synchronized (lock) {
+            if (state == State.NOT_STARTED) {
+                throw new IllegalStateException("Not started");
+            } else if (state == State.RUNNING_COMMAND) {
+                waitUntil("\r:");
+            } else if (state == State.NEWLINE_READ) {
+                waitUntil(":");
+            }
+            state = State.RUNNING_COMMAND;
+            write(command + "\r");
+            String validCommand = readUntil("\r");
+            if (validCommand.equals("ACK")) {
+                return true;
+            } else if (validCommand.equals("NCK")) {
+                return false;
+            } else {
+                debug.log("[sendCommand] Invalid command response, not ACK or NCK: '%s'. Assuming NCK.", validCommand);
+                return false;
+            }
         }
     }
 
     public void waitUntil(String str) throws IOException {
-        waitUntil(CMUUtils.toBytes(str));
-        if (str.endsWith("\r")) {
-            state = State.NEWLINE_READ;
-        } else if (str.endsWith("\r:")) {
-            state = State.READY_FOR_COMMAND;
+        synchronized (lock) {
+            waitUntil(CMUUtils.toBytes(str));
+            if (str.endsWith("\r")) {
+                state = State.NEWLINE_READ;
+            } else if (str.endsWith("\r:")) {
+                state = State.READY_FOR_COMMAND;
+            }
         }
     }
 
     public String readUntil(String str) throws IOException {
-        String result = CMUUtils.toString(readUntil(CMUUtils.toBytes(str)));
-        if (str.endsWith("\r")) {
-            state = State.NEWLINE_READ;
-        } else if (str.endsWith("\r:")) {
-            state = State.READY_FOR_COMMAND;
+        synchronized (lock) {
+            String result = CMUUtils.toString(readUntil(CMUUtils.toBytes(str)));
+            if (str.endsWith("\r")) {
+                state = State.NEWLINE_READ;
+            } else if (str.endsWith("\r:")) {
+                state = State.READY_FOR_COMMAND;
+            }
+            return result;
         }
-        return result;
     }
 
     public void waitUntil(byte[] bytesToMatch) throws IOException {
-        if (state == State.NOT_STARTED) {
-            throw new IllegalStateException("Not started");
-        }
-        int bytesMatched = 0;
-        while (true) {
-            if (bytesMatched >= bytesToMatch.length) {
-                return;
+        synchronized (lock) {
+            if (state == State.NOT_STARTED) {
+                throw new IllegalStateException("Not started");
             }
-            int b = rawInput.read();
-            if (b == bytesToMatch[bytesMatched]) {
-                bytesMatched++;
-            } else {
-                bytesMatched = 0;
+            int bytesMatched = 0;
+            while (true) {
+                if (bytesMatched >= bytesToMatch.length) {
+                    return;
+                }
+                int b = rawInput.read();
+                if (b == bytesToMatch[bytesMatched]) {
+                    bytesMatched++;
+                } else {
+                    bytesMatched = 0;
+                }
             }
         }
     }
 
     public byte[] readUntil(byte[] bytesToMatch) throws IOException {
-        if (state == State.NOT_STARTED) {
-            throw new IllegalStateException("Not started");
-        }
-        int bytesMatched = 0;
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        while (true) {
-            if (bytesMatched >= bytesToMatch.length) {
-                byte[] allBytesRead = outputStream.toByteArray();
-                return Arrays.copyOf(allBytesRead, allBytesRead.length - bytesMatched);
+        synchronized (lock) {
+            if (state == State.NOT_STARTED) {
+                throw new IllegalStateException("Not started");
             }
-            int b = rawInput.read();
-            if (b == bytesToMatch[bytesMatched]) {
-                bytesMatched++;
-            } else {
-                bytesMatched = 0;
+            int bytesMatched = 0;
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            while (true) {
+                if (bytesMatched >= bytesToMatch.length) {
+                    byte[] allBytesRead = outputStream.toByteArray();
+                    return Arrays.copyOf(allBytesRead, allBytesRead.length - bytesMatched);
+                }
+                int b = rawInput.read();
+                if (b == bytesToMatch[bytesMatched]) {
+                    bytesMatched++;
+                } else {
+                    bytesMatched = 0;
+                }
+                outputStream.write(b);
             }
-            outputStream.write(b);
         }
     }
 
     public void write(String str) throws IOException {
-        if (state == State.NOT_STARTED) {
-            throw new IllegalStateException("Not started");
+        synchronized (lock) {
+            if (state == State.NOT_STARTED) {
+                throw new IllegalStateException("Not started");
+            }
+            output.write(str);
+            output.flush();
+            rawOutput.flush();
         }
-        output.write(str);
-        output.flush();
-        rawOutput.flush();
     }
 
     protected abstract void setBaud(int baud) throws IOException;

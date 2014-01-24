@@ -24,9 +24,9 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import net.daboross.cmucamjava.CMUColorTracking;
+import net.daboross.cmucamjava.api.CMUColorTrackingListener;
 
-public class ColorTrackingPanel extends JPanel implements CMUColorTracking.ColorTrackingUpdatable {
+public class ColorTrackingPanel extends JPanel implements CMUColorTrackingListener {
 
     private final ColorTrackingCanvas canvas;
     private final JLabel[] labels;
@@ -49,7 +49,8 @@ public class ColorTrackingPanel extends JPanel implements CMUColorTracking.Color
         add(textPanel, constraints);
     }
 
-    public void update(int[] values) {
+    public void onNewColorTrackingData(final int[] values) {
+
         labels[0].setText(String.format("AverageX = %05d", values[0]));
         labels[1].setText(String.format("LeftX = %05d", values[2]));
         labels[2].setText(String.format("TopY = %05d", values[3]));

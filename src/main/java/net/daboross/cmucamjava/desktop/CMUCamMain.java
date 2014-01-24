@@ -23,8 +23,6 @@ import net.daboross.cmucamjava.CMUColorTracking;
 public class CMUCamMain {
 
     private CMUColorTracking tracking;
-    private ColorTrackingPanel panel;
-    private CMUCamWindow debug;
     private CMUCamConnection cmu;
 
     public static void main(String[] args) throws IOException {
@@ -32,30 +30,34 @@ public class CMUCamMain {
     }
 
     public void start() throws IOException {
-        debug = new CMUCamWindow(new Runnable() {
-            public void run() {
-                if (tracking != null) {
-                    try {
-                        tracking.stopTracking();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (cmu != null) {
-                    try {
-                        cmu.end();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+        Runnable end = new EndRunnable();
+        tracking = new CMUColorTracking(10);
+        ColorTrackingPanel panel = new ColorTrackingPanel();
+        CMUCamWindow debug = new CMUCamWindow(end);
+        tracking.registerListener(panel);
+        debug.addComponent(panel);
         cmu = new RxtxCMUCamConnection(debug);
         debug.log("[main] Starting");
-        tracking = new CMUColorTracking(cmu, 10);
-        panel = new ColorTrackingPanel();
-        debug.addComponent(panel);
-        tracking.addColorTrackingUpdatable(panel);
-        tracking.startTracking();
+        cmu.start();
+        cmu.runCommandSet(tracking);
+        debug.end(end);
+    }
+
+    private class EndRunnable implements Runnable {
+
+        public void run() {
+            try {
+                tracking.stopTrackingNext();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (cmu != null) {
+                try {
+                    cmu.end();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

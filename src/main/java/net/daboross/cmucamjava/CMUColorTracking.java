@@ -21,27 +21,27 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
+import net.daboross.cmucamjava.api.CMUColorTrackingListener;
+import net.daboross.cmucamjava.api.CMUCommandSet;
 
-public class CMUColorTracking {
+public class CMUColorTracking extends CMUCommandSet {
 
-    private final Set<ColorTrackingUpdatable> updatables = new LinkedHashSet<ColorTrackingUpdatable>();
+    private final Set<CMUColorTrackingListener> listeners = new LinkedHashSet<CMUColorTrackingListener>();
     private final int[] averages = new int[8];
     @SuppressWarnings("unchecked")
     private final Queue<Integer>[] storedValues = new Queue[averages.length];
-    private final CMUCamConnection c;
     private final int pastValuesToAverage;
     private boolean currentlyTracking;
-    private CMUCamTrackingReadThread thread;
 
-    public CMUColorTracking(final CMUCamConnection connection, final int pastValuesToAverage) {
-        this.c = connection;
+    public CMUColorTracking(final int pastValuesToAverage) {
         this.pastValuesToAverage = pastValuesToAverage;
         for (int i = 0; i < storedValues.length; i++) {
             storedValues[i] = new LinkedList<Integer>();
         }
     }
 
-    public void startTracking() throws IOException {
+    @Override
+    public void init(CMUCamConnection c) throws IOException {
         if (currentlyTracking) {
             return;
         }
@@ -54,16 +54,26 @@ public class CMUColorTracking {
         c.sendCommand("ST 150 167 18 29 104 118");
         c.debug.log("[tracking] Starting tracking");
         c.sendCommand("TC");
-        thread = new CMUCamTrackingReadThread();
-        thread.start();
     }
 
-    public void stopTracking() throws IOException {
-        currentlyTracking = false;
-        if (thread != null) {
-            thread.interrupt();
+    @Override
+    public boolean runWith(final CMUCamConnection c) throws IOException {
+        String response = c.readUntil("\r");
+        try {
+            update(response);
+        } catch (IllegalArgumentException ex) {
+            ex.printStackTrace(c.debug.loggingStream());
         }
+        return currentlyTracking;
+    }
+
+    @Override
+    public void end(final CMUCamConnection c) throws IOException {
         c.write("\r");
+    }
+
+    public void stopTrackingNext() throws IOException {
+        currentlyTracking = false;
     }
 
     private void update(String data) {
@@ -72,8 +82,8 @@ public class CMUColorTracking {
         } else {
             throw new IllegalArgumentException(String.format("Unknown data packet format '%s'.", data));
         }
-        for (ColorTrackingUpdatable updatable : updatables) {
-            updatable.update(averages);
+        for (CMUColorTrackingListener listener : listeners) {
+            listener.onNewColorTrackingData(averages);
         }
     }
 
@@ -87,7 +97,7 @@ public class CMUColorTracking {
             try {
                 newValues[i] = Integer.parseInt(split[i + 1]);
             } catch (NumberFormatException ex) {
-                throw new IllegalArgumentException("Invalid T packet '" + packet + "': value '" + split[i + 1] + "' is not an integer.", ex);
+                throw new IllegalArgumentException(String.format("Invalid T packet '%s': value '%s' is not an integer.", packet, split[i + 1]), ex);
             }
         }
         updateAverages(newValues);
@@ -104,40 +114,15 @@ public class CMUColorTracking {
         }
     }
 
-    public void addColorTrackingUpdatable(ColorTrackingUpdatable updatable) {
-        if (updatable != null) {
-            updatables.add(updatable);
+    public void registerListener(CMUColorTrackingListener listener) {
+        if (listener != null) {
+            listeners.add(listener);
         }
     }
 
-    public interface ColorTrackingUpdatable {
-
-        /**
-         * @param arguments int[8]  containing color tracking information
-         *                  (mx my x1 y1 x2 y2 pixels confidence)
-         */
-        public void update(int[] arguments);
-    }
-
-    private class CMUCamTrackingReadThread extends Thread {
-
-        public CMUCamTrackingReadThread() {
-            super("CMUCam Tracking Read Thread");
-        }
-
-        public void run() {
-            try {
-                while (currentlyTracking) {
-                    String response = c.readUntil("\r");
-                    try {
-                        update(response);
-                    } catch (IllegalArgumentException ex) {
-                        ex.printStackTrace(c.debug.loggingStream());
-                    }
-                }
-            } catch (IOException e) {
-                c.debug.log("Unexpected IOException in CMUCamTrackingReadThread", e);
-            }
+    public void unregisterListener(CMUColorTrackingListener listener) {
+        if (listener != null) {
+            listeners.remove(listener);
         }
     }
 }
