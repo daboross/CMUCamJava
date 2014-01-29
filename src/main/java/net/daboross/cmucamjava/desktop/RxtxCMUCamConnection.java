@@ -41,7 +41,7 @@ public class RxtxCMUCamConnection extends CMUCamConnection {
         }
         if (portIdentifier.isCurrentlyOwned()) {
             debug.log("[Warning] Port '%s' is already owned.", portIdentifier.getName());
-            throw new IOException("PortInUse");
+            throw new IOException("Port in use");
         }
         CommPort commPort;
         try {
